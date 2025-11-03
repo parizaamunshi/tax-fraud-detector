@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fraud Check Result</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Result</h1>
+        <p class="result">{{ result }}</p>
+
+        {% if data %}
+        <h3>Transaction Details:</h3>
+        <ul>
+            {% for key, value in data.items() %}
+            <li><strong>{{ key }}:</strong> {{ value }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        <a href="/">🔙 Go Back</a>
+    </div>
+</body>
+</html>

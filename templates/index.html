@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fraud Transaction Checker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>💳 Fraud Transaction Checker</h1>
+        <form action="/predict" method="post">
+            <label>Step:</label><input type="number" name="step" step="any" required><br>
+            <label for="type">Transaction Type:</label>
+<select name="type" id="type" required>
+    <option value="PAYMENT">PAYMENT</option>
+    <option value="TRANSFER">TRANSFER</option>
+    <option value="CASH_OUT">CASH_OUT</option>
+    <option value="DEBIT">DEBIT</option>
+    <option value="CASH_IN">CASH_IN</option>
+</select>
+<br><br>
+            <label>Amount:</label><input type="number" name="amount" step="any" required><br>
+            <label>Old Balance (Origin):</label><input type="number" name="oldbalanceOrg" step="any" required><br>
+            <label>New Balance (Origin):</label><input type="number" name="newbalanceOrig" step="any" required><br>
+            <label>Old Balance (Destination):</label><input type="number" name="oldbalanceDest" step="any" required><br>
+            <label>New Balance (Destination):</label><input type="number" name="newbalanceDest" step="any" required><br>
+
+            <button type="submit">Check Transaction</button>
+        </form>
+    </div>
+</body>
+</html>

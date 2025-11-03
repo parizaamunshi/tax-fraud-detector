@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .dashboard {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .analysis-section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .analysis-section h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .entity-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .entity-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-left: 4px solid #e74c3c;
+            border-radius: 4px;
+        }
+
+        .risk-score {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .risk-high {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .risk-medium {
+            background: #f39c12;
+            color: white;
+        }
+
+        .risk-low {
+            background: #27ae60;
+            color: white;
+        }
+
+        .button-group {
+            margin: 20px 0;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard">
+        <h1>🔍 Tax Fraud Detection Dashboard</h1>
+
+        <!-- System Stats -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-label">Total Entities</div>
+                <div class="stat-value" id="totalEntities">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Transactions</div>
+                <div class="stat-value" id="totalTransactions">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Detected Fraud Cases</div>
+                <div class="stat-value" id="fraudCases">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Models Active</div>
+                <div class="stat-value" id="modelsActive">-</div>
+            </div>
+        </div>
+
+        <div class="analysis-section">
+            <h2>⚠️ High Risk Entities</h2>
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="loadRiskScores()">
+                    Calculate Risk Scores
+                </button>
+            </div>
+            <div id="riskResults" class="loading">
+                Click the button above to calculate entity risk scores
+            </div>
+        </div>
+
+        <div class="analysis-section">
+            <h2>🏢 Potential Shell Companies</h2>
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="loadShellCompanies()">
+                    Identify Shell Companies
+                </button>
+            </div>
+            <div id="shellResults" class="loading">
+                Click the button above to identify potential shell companies
+            </div>
+        </div>
+
+        <div class="analysis-section">
+            <h2>🔄 Circular Transaction Patterns</h2>
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="loadCircularTransactions()">
+                    Detect Circular Patterns
+                </button>
+            </div>
+            <div id="circularResults" class="loading">
+                Click the button above to detect circular transaction patterns
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/" class="btn btn-secondary">← Back to Main Interface</a>
+        </div>
+    </div>
+
+    <script>
+        // Load system stats on page load
+        window.addEventListener('load', loadSystemStats);
+
+        async function loadSystemStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                if (data.graph_stats) {
+                    document.getElementById('totalEntities').textContent =
+                        data.graph_stats.total_entities.toLocaleString();
+                    document.getElementById('totalTransactions').textContent =
+                        data.graph_stats.total_transactions.toLocaleString();
+                    document.getElementById('fraudCases').textContent =
+                        data.graph_stats.fraud_cases.toLocaleString();
+                }
+
+                const modelsCount = Object.values(data.models_loaded).filter(v => v).length;
+                document.getElementById('modelsActive').textContent =
+                    `${modelsCount}/3`;
+
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadCircularTransactions() {
+            const resultsDiv = document.getElementById('circularResults');
+            resultsDiv.innerHTML = '<div class="loading">Analyzing transaction network...</div>';
+
+            try {
+                const response = await fetch('/graph/circular_transactions');
+                const data = await response.json();
+
+                if (data.error) {
+                    resultsDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                    return;
+                }
+
+                let html = `<p><strong>Found ${data.total_cycles} circular patterns</strong></p>`;
+
+                if (data.suspicious_cycles.length > 0) {
+                    html += '<div class="entity-list">';
+                    data.suspicious_cycles.forEach((cycle, idx) => {
+                        html += `
+                            <div class="entity-item">
+                                <strong>Pattern #${idx + 1}</strong><br>
+                                Entities: ${cycle.length}<br>
+                                Total Amount: $${cycle.total_amount.toLocaleString()}<br>
+                                Suspicion Score: ${cycle.suspicion_score.toFixed(2)}
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                } else {
+                    html += '<p>No circular patterns detected</p>';
+                }
+
+                resultsDiv.innerHTML = html;
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function loadShellCompanies() {
+            const resultsDiv = document.getElementById('shellResults');
+            resultsDiv.innerHTML = '<div class="loading">Analyzing company networks...</div>';
+
+            try {
+                const response = await fetch('/graph/shell_companies');
+                const data = await response.json();
+
+                if (data.error) {
+                    resultsDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                    return;
+                }
+
+                let html = `<p><strong>Found ${data.total_suspects} suspicious entities</strong></p>`;
+
+                if (data.shell_networks.length > 0) {
+                    html += '<div class="entity-list">';
+                    data.shell_networks.forEach((shell, idx) => {
+                        const riskClass = shell.shell_score > 0.8 ? 'risk-high' :
+                            shell.shell_score > 0.6 ? 'risk-medium' : 'risk-low';
+                        html += `
+                            <div class="entity-item">
+                                <strong>Entity: ${shell.entity_id}</strong>
+                                <span class="${riskClass} risk-score">
+                                    ${(shell.shell_score * 100).toFixed(0)}%
+                                </span><br>
+                                Network Size: ${shell.network_size} connections<br>
+                                Transaction Ratio: ${shell.indicators.transaction_ratio?.toFixed(2) ?? 'N/A'}
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                } else {
+                    html += '<p>No suspicious shell companies detected</p>';
+                }
+
+                resultsDiv.innerHTML = html;
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function loadRiskScores() {
+            const resultsDiv = document.getElementById('riskResults');
+            resultsDiv.innerHTML = '<div class="loading">Calculating risk scores...</div>';
+
+            try {
+                const response = await fetch('/graph/risk_scores');
+                const data = await response.json();
+
+                if (data.error) {
+                    resultsDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                    return;
+                }
+
+                let html = `<p><strong>Top ${data.high_risk_entities.length} High-Risk Entities</strong></p>`;
+                html += '<div class="entity-list">';
+
+                data.high_risk_entities.forEach((entity, idx) => {
+                    const riskClass = entity.risk_score > 0.7 ? 'risk-high' :
+                        entity.risk_score > 0.4 ? 'risk-medium' : 'risk-low';
+                    html += `
+                        <div class="entity-item">
+                            <strong>#${idx + 1}: ${entity.entity_id}</strong>
+                            <span class="${riskClass} risk-score">
+                                Risk: ${(entity.risk_score * 100).toFixed(1)}%
+                            </span>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+
+</html>
